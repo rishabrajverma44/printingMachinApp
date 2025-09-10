@@ -64,22 +64,80 @@ app.get("/printer/queue", async (req, res) => {
   }
 });
 
-// Cancel job
+// Cancel based on jobID
 app.post("/printer/cancel", async (req, res) => {
   try {
-    const { type = "OS", jobId, name, url } = req.body;
+    const body = req.body || {};
+    const type = body.type || "OS";
+    const jobId = body.jobId;
+    const printerName = body.printerName;
+    const url = body.url;
+
+    if (!jobId) {
+      return res
+        .status(400)
+        .json({ status: "error", message: "jobId is required" });
+    }
+
     let result;
     if (type === "OS") {
-      result = await PrinterCancel.cancelSystemJob(jobId, name);
+      if (!printerName) {
+        return res.status(400).json({
+          status: "error",
+          message: "printerName is required for OS jobs",
+        });
+      }
+      result = await PrinterCancel.cancelSystemJob(jobId, printerName);
     } else if (type === "IPP") {
+      if (!url) {
+        return res
+          .status(400)
+          .json({ status: "error", message: "IPP printer URL is required" });
+      }
       result = await PrinterCancel.cancelIPPJob(url, jobId);
     } else {
-      return res.status(400).json({ status: "error", message: "Invalid type" });
+      return res
+        .status(400)
+        .json({ status: "error", message: "Invalid printer type" });
     }
 
     res.json({ status: "ok", result });
   } catch (err) {
     console.error("Cancel error:", err);
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// Cancel all jobs
+app.post("/printer/cancelAll", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const ippUrls = body.ippUrls || [
+      "http://192.168.1.50:631/ipp/print",
+      "http://192.168.1.51:631/ipp/print",
+    ];
+
+    const result = await PrinterCancel.cancelAll(ippUrls);
+    res.json({ status: "ok", result });
+  } catch (err) {
+    console.error("CancelAll error:", err);
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+//cancel all printers
+app.post("/printer/cancelAll", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const ippUrls = body.ippUrls || [
+      "http://192.168.1.50:631/ipp/print",
+      "http://192.168.1.51:631/ipp/print",
+    ];
+
+    const result = await PrinterCancel.cancelAll(ippUrls);
+    res.json({ status: "ok", result });
+  } catch (err) {
+    console.error("CancelAll error:", err);
     res.status(500).json({ status: "error", message: err.message });
   }
 });
