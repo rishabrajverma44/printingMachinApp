@@ -1,0 +1,3311 @@
+// import React, { useState } from "react";
+// import Papa from "papaparse";
+// import {
+//   Box,
+//   Card,
+//   CardContent,
+//   Typography,
+//   Button,
+//   Alert,
+//   LinearProgress,
+//   Chip,
+//   Paper,
+//   Container,
+//   Grid,
+//   IconButton,
+//   Tooltip,
+//   Divider,
+//   Avatar,
+//   List,
+//   ListItem,
+//   ListItemIcon,
+//   ListItemText,
+//   Fade,
+//   Zoom,
+//   Dialog,
+//   DialogTitle,
+//   DialogContent,
+//   DialogActions,
+// } from "@mui/material";
+// import {
+//   CloudUpload,
+//   GetApp,
+//   FileCopy,
+//   Refresh,
+//   CheckCircle,
+//   Error,
+//   Description,
+//   Transform,
+//   QrCode,
+//   Download,
+//   Close,
+//   Print,
+// } from "@mui/icons-material";
+
+// function FileUpload() {
+//   const [csvData, setCsvData] = useState([]);
+//   const [jsonData, setJsonData] = useState("");
+//   const [fileName, setFileName] = useState("");
+//   const [isConverted, setIsConverted] = useState(false);
+//   const [error, setError] = useState("");
+//   const [isProcessing, setIsProcessing] = useState(false);
+//   const [dragOver, setDragOver] = useState(false);
+//   const [success, setSuccess] = useState("");
+//   const [qrCodes, setQrCodes] = useState([]);
+//   const [showQrModal, setShowQrModal] = useState(false);
+//   const [selectedQr, setSelectedQr] = useState(null);
+
+//   const generateQRCode = (text, size = 200) => {
+//     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(
+//       text
+//     )}`;
+//     return qrUrl;
+//   };
+
+//   const csvUploadFn = (file) => {
+//     if (!file) return;
+
+//     const fileType = file.name.split(".").pop().toLowerCase();
+//     if (fileType !== "csv") {
+//       setError("Please upload a CSV file.");
+//       return;
+//     }
+
+//     setError("");
+//     setSuccess("");
+//     setIsProcessing(true);
+//     setFileName(file.name);
+
+//     Papa.parse(file, {
+//       complete: (result) => {
+//         if (result.errors.length > 0) {
+//           setError("Error parsing CSV file. Please check the file format.");
+//           setIsProcessing(false);
+//           return;
+//         }
+//         setCsvData(result.data);
+//         setIsProcessing(false);
+//         setSuccess(
+//           `Successfully loaded ${result.data.length} rows from CSV file.`
+//         );
+//       },
+//       header: true,
+//       skipEmptyLines: true,
+//       dynamicTyping: true,
+//       error: (error) => {
+//         setError(
+//           "Failed to parse CSV file. Please ensure it's properly formatted."
+//         );
+//         setIsProcessing(false);
+//       },
+//     });
+//   };
+
+//   const handleFileInput = (event) => {
+//     const file = event.target.files[0];
+//     csvUploadFn(file);
+//   };
+
+//   const handleDrop = (event) => {
+//     event.preventDefault();
+//     setDragOver(false);
+//     const file = event.dataTransfer.files[0];
+//     csvUploadFn(file);
+//   };
+
+//   const handleDragOver = (event) => {
+//     event.preventDefault();
+//     setDragOver(true);
+//   };
+
+//   const handleDragLeave = (event) => {
+//     event.preventDefault();
+//     setDragOver(false);
+//   };
+
+//   const conversionFn = () => {
+//     if (csvData.length === 0) {
+//       setError("No CSV data to convert");
+//       return;
+//     }
+
+//     const res = JSON.stringify(csvData, null, 2);
+//     setJsonData(res);
+//     setIsConverted(true);
+//     setError("");
+//     setSuccess("CSV successfully converted to JSON format!");
+
+//     // Generate QR codes for each Primary LOT
+//     generateQRCodes();
+//   };
+
+//   const generateQRCodes = () => {
+//     const qrList = [];
+
+//     csvData.forEach((row, index) => {
+//       // Look for Primary LOT field (checking various possible field names)
+//       const primaryLot =
+//         row["Primary LOT"] ||
+//         row["Primary IOT"] ||
+//         row["primary_lot"] ||
+//         row["primary_iot"];
+
+//       if (primaryLot) {
+//         const qrUrl = generateQRCode(primaryLot, 300);
+//         qrList.push({
+//           id: index,
+//           primaryLot: primaryLot,
+//           loyaltyId: row["Loyalty ID"] || row["loyalty_id"] || "",
+//           qrUrl: qrUrl,
+//         });
+//       }
+//     });
+
+//     setQrCodes(qrList);
+//   };
+
+//   const downloadJson = () => {
+//     if (!jsonData) return;
+
+//     const blob = new Blob([jsonData], { type: "application/json" });
+//     const url = URL.createObjectURL(blob);
+//     const a = document.createElement("a");
+//     a.href = url;
+//     a.download = fileName.replace(".csv", ".json") || "converted-data.json";
+//     document.body.appendChild(a);
+//     a.click();
+//     document.body.removeChild(a);
+//     URL.revokeObjectURL(url);
+//   };
+
+//   const downloadAllQRCodes = () => {
+//     qrCodes.forEach((qr, index) => {
+//       setTimeout(() => {
+//         const a = document.createElement("a");
+//         a.href = qr.qrUrl;
+//         a.download = `QR_${qr.primaryLot}.png`;
+//         document.body.appendChild(a);
+//         a.click();
+//         document.body.removeChild(a);
+//       }, index * 500); // Delay to avoid overwhelming the server
+//     });
+//   };
+
+//   // Updated for multiple QR codes per page - optimized for thermal printer
+//   const printAllQRCodesThermal = () => {
+//     const printWindow = window.open("", "_blank");
+
+//     // Calculate QR codes per row and per page for optimal layout
+//     const qrSize = 72; // 1 inch = 72 points
+//     const pageWidth = 612; // A4 width in points (8.5 * 72)
+//     const pageHeight = 792; // A4 height in points (11 * 72)
+//     const margin = 18; // 0.25 inch margin in points
+//     const gap = 7.2; // 0.1 inch gap in points
+
+//     const availableWidth = pageWidth - 2 * margin;
+//     const availableHeight = pageHeight - 2 * margin;
+
+//     const qrPerRow = Math.floor((availableWidth + gap) / (qrSize + gap));
+//     const rowsPerPage = Math.floor((availableHeight + gap) / (qrSize + gap));
+//     const qrPerPage = qrPerRow * rowsPerPage;
+
+//     // Create thermal printer optimized HTML with multiple QR codes per page
+//     const printContent = `
+//       <!DOCTYPE html>
+//       <html>
+//         <head>
+//           <title>Thermal QR Codes</title>
+//           <style>
+//             @media print {
+//               * {
+//                 margin: 0;
+//                 padding: 0;
+//                 box-sizing: border-box;
+//                 -webkit-print-color-adjust: exact;
+//                 print-color-adjust: exact;
+//               }
+
+//               body {
+//                 font-family: 'Courier New', monospace;
+//                 font-size: 8pt;
+//                 line-height: 1;
+//                 width: 100%;
+//                 background: white;
+//               }
+
+//               /* Page container */
+//               .page {
+//                 width: 100%;
+//                 min-height: 100vh;
+//                 display: flex;
+//                 flex-direction: column;
+//                 justify-content: flex-start;
+//                 align-items: center;
+//                 padding: 0.25in;
+//                 page-break-after: always;
+//                 box-sizing: border-box;
+//               }
+
+//               .page:last-child {
+//                 page-break-after: avoid;
+//               }
+
+//               /* Container for QR codes within each page */
+//               .qr-grid {
+//                 display: grid;
+//                 grid-template-columns: repeat(${qrPerRow}, 1in);
+//                 grid-template-rows: repeat(${rowsPerPage}, 1in);
+//                 gap: 0.1in;
+//                 width: 100%;
+//                 max-width: ${availableWidth / 72}in;
+//                 justify-content: center;
+//                 align-content: start;
+//               }
+
+//               /* Individual QR label - exactly 1x1 inch */
+//               .qr-label {
+//                 width: 1in;
+//                 height: 1in;
+//                 display: flex;
+//                 flex-direction: column;
+//                 align-items: center;
+//                 justify-content: center;
+//                 border: 2px solid #000;
+//                 background: white;
+//                 text-align: center;
+//                 page-break-inside: avoid;
+//                 box-sizing: border-box;
+//               }
+
+//               .qr-image {
+//                 width: 0.7in;
+//                 height: 0.7in;
+//                 margin: 0;
+//                 display: block;
+//                 object-fit: contain;
+//               }
+
+//               .qr-text {
+//                 font-size: 6pt;
+//                 font-weight: bold;
+//                 color: black;
+//                 margin-top: 2px;
+//                 text-align: center;
+//                 white-space: nowrap;
+//                 overflow: hidden;
+//                 text-overflow: ellipsis;
+//                 max-width: 0.9in;
+//                 line-height: 1;
+//               }
+
+//               /* Page settings */
+//               @page {
+//                 size: A4 portrait;
+//                 margin: 0;
+//               }
+//             }
+
+//             @media screen {
+//               body { background: #f0f0f0; padding: 20px; }
+//               .page {
+//                 background: white;
+//                 margin-bottom: 20px;
+//                 box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+//                 min-height: auto;
+//                 padding: 20px;
+//               }
+//               .qr-grid {
+//                 display: grid;
+//                 grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+//                 gap: 10px;
+//                 max-width: 1200px;
+//                 margin: 0 auto;
+//               }
+//               .qr-label {
+//                 border: 1px solid #ccc;
+//                 background: white;
+//                 padding: 5px;
+//                 border-radius: 4px;
+//                 width: 96px;
+//                 height: 96px;
+//                 display: flex;
+//                 flex-direction: column;
+//                 align-items: center;
+//                 justify-content: center;
+//               }
+//               .qr-image { width: 70px; height: 70px; }
+//               .qr-text { font-size: 8px; margin-top: 4px; }
+//             }
+//           </style>
+//         </head>
+//         <body>
+//           ${(() => {
+//             const qrPerPage = qrPerRow * rowsPerPage;
+//             const pages = [];
+
+//             for (let i = 0; i < qrCodes.length; i += qrPerPage) {
+//               const pageQRs = qrCodes.slice(i, i + qrPerPage);
+//               pages.push(`
+//                 <div class="page">
+//                   <div class="qr-grid">
+//                     ${pageQRs
+//                       .map(
+//                         (qr, index) => `
+//                       <div class="qr-label">
+//                         <img src="${qr.qrUrl}" alt="${qr.primaryLot}" class="qr-image" />
+//                         <div class="qr-text">${qr.primaryLot}</div>
+//                       </div>
+//                     `
+//                       )
+//                       .join("")}
+//                   </div>
+//                 </div>
+//               `);
+//             }
+
+//             return pages.join("");
+//           })()}
+//         </body>
+//       </html>
+//     `;
+
+//     printWindow.document.write(printContent);
+//     printWindow.document.close();
+
+//     // Wait for images to load before printing
+//     printWindow.onload = () => {
+//       setTimeout(() => {
+//         printWindow.print();
+//       }, 2000); // Increased delay for image loading
+//     };
+//   };
+
+//   const printSingleQRThermal = (qr) => {
+//     const printWindow = window.open("", "_blank");
+
+//     const printContent = `
+//       <!DOCTYPE html>
+//       <html>
+//         <head>
+//           <title>QR Code - ${qr.primaryLot}</title>
+//           <style>
+//             @media print {
+//               * { margin: 0; padding: 0; box-sizing: border-box; }
+
+//               body {
+//                 font-family: 'Courier New', monospace;
+//                 display: flex;
+//                 align-items: center;
+//                 justify-content: center;
+//                 min-height: 100vh;
+//               }
+
+//               .qr-label {
+//                 width: 1in;
+//                 height: 1in;
+//                 display: flex;
+//                 flex-direction: column;
+//                 align-items: center;
+//                 justify-content: center;
+//                 background: white;
+//                 text-align: center;
+//                 border: 1px solid #000;
+//               }
+
+//               .qr-image {
+//                 width: 0.7in;
+//                 height: 0.7in;
+//                 margin: 0;
+//                 display: block;
+//               }
+
+//               .qr-text {
+//                 font-size: 6pt;
+//                 font-weight: bold;
+//                 color: black;
+//                 margin-top: 2px;
+//                 text-align: center;
+//                 white-space: nowrap;
+//                 overflow: hidden;
+//                 text-overflow: ellipsis;
+//                 max-width: 0.95in;
+//               }
+
+//               @page {
+//                 size: 1in 1in;
+//                 margin: 0;
+//               }
+//             }
+//           </style>
+//         </head>
+//         <body>
+//           <div class="qr-label">
+//             <img src="${qr.qrUrl}" alt="${qr.primaryLot}" class="qr-image" />
+//             <div class="qr-text">${qr.primaryLot}</div>
+//           </div>
+//         </body>
+//       </html>
+//     `;
+
+//     printWindow.document.write(printContent);
+//     printWindow.document.close();
+
+//     printWindow.onload = () => {
+//       setTimeout(() => {
+//         printWindow.print();
+//         printWindow.close();
+//       }, 1000);
+//     };
+//   };
+
+//   const resetConverter = () => {
+//     setCsvData([]);
+//     setJsonData("");
+//     setFileName("");
+//     setIsConverted(false);
+//     setError("");
+//     setSuccess("");
+//     setIsProcessing(false);
+//     setQrCodes([]);
+//   };
+
+//   const openQrModal = (qr) => {
+//     setSelectedQr(qr);
+//     setShowQrModal(true);
+//   };
+
+//   return (
+//     <Box
+//       sx={{
+//         width: "100vw",
+//         minHeight: "100vh",
+//         background: `linear-gradient(135deg, #337ab7 0%, #2c6ba0 100%)`,
+//         py: 2,
+//       }}
+//     >
+//       <Container sx={{ height: "100%", width: "100%" }}>
+//         <Zoom in timeout={800}>
+//           <Box textAlign="center" mb={4}>
+//             <Typography
+//               variant="h3"
+//               component="h1"
+//               gutterBottom
+//               sx={{
+//                 color: "white",
+//                 fontWeight: "bold",
+//                 textShadow: "0 2px 4px rgba(0,0,0,0.3)",
+//               }}
+//             >
+//               CSV to JSON & QR Code Generator
+//             </Typography>
+//             <Typography variant="h6" sx={{ color: "rgba(255,255,255,0.9)" }}>
+//               Convert CSV to JSON and generate QR codes for thermal printing
+//             </Typography>
+//           </Box>
+//         </Zoom>
+
+//         {/* Main Converter Card */}
+//         <Fade in timeout={1000}>
+//           <Card elevation={8} sx={{ mb: 4, borderRadius: 3 }}>
+//             <CardContent sx={{ p: 4 }}>
+//               {/* Upload Section */}
+//               <Typography
+//                 variant="h5"
+//                 gutterBottom
+//                 color="primary"
+//                 sx={{
+//                   display: "flex",
+//                   alignItems: "center",
+//                   mb: 3,
+//                 }}
+//               >
+//                 <CloudUpload sx={{ mr: 1 }} />
+//                 Upload CSV File
+//               </Typography>
+
+//               <Paper
+//                 variant="outlined"
+//                 onDrop={handleDrop}
+//                 onDragOver={handleDragOver}
+//                 onDragLeave={handleDragLeave}
+//                 sx={{
+//                   p: 4,
+//                   textAlign: "center",
+//                   border: dragOver ? "2px dashed #1976d2" : "2px dashed #ccc",
+//                   bgcolor: dragOver ? "action.hover" : "background.paper",
+//                   cursor: "pointer",
+//                   transition: "all 0.3s ease",
+//                   "&:hover": {
+//                     borderColor: "primary.main",
+//                     bgcolor: "action.hover",
+//                   },
+//                   mb: 3,
+//                 }}
+//               >
+//                 <Description
+//                   sx={{ fontSize: 48, color: "text.secondary", mb: 2 }}
+//                 />
+//                 <Typography variant="h6" gutterBottom>
+//                   Drag and drop your CSV file here
+//                 </Typography>
+//                 <Typography
+//                   variant="body2"
+//                   color="text.secondary"
+//                   sx={{ mb: 3 }}
+//                 >
+//                   or click the button below to browse files
+//                 </Typography>
+
+//                 <input
+//                   type="file"
+//                   onChange={handleFileInput}
+//                   accept=".csv"
+//                   style={{ display: "none" }}
+//                   id="csv-upload-input"
+//                 />
+//                 <label htmlFor="csv-upload-input">
+//                   <Button
+//                     variant="contained"
+//                     component="span"
+//                     startIcon={<CloudUpload />}
+//                     size="large"
+//                     sx={{ borderRadius: 2 }}
+//                   >
+//                     Choose CSV File
+//                   </Button>
+//                 </label>
+//               </Paper>
+
+//               {/* File Status */}
+//               {fileName && (
+//                 <Fade in>
+//                   <Box mb={3}>
+//                     <Chip
+//                       icon={<CheckCircle />}
+//                       label={`File: ${fileName}`}
+//                       color="success"
+//                       variant="outlined"
+//                       sx={{ mr: 2 }}
+//                     />
+//                     {csvData.length > 0 && (
+//                       <Chip
+//                         label={`${csvData.length} rows loaded`}
+//                         color="info"
+//                         variant="outlined"
+//                       />
+//                     )}
+//                   </Box>
+//                 </Fade>
+//               )}
+
+//               {/* Processing Indicator */}
+//               {isProcessing && (
+//                 <Box mb={3}>
+//                   <LinearProgress sx={{ mb: 1 }} />
+//                   <Typography variant="body2" color="text.secondary">
+//                     Processing CSV file...
+//                   </Typography>
+//                 </Box>
+//               )}
+
+//               {/* Alert Messages */}
+//               {error && (
+//                 <Fade in>
+//                   <Alert severity="error" sx={{ mb: 3 }} icon={<Error />}>
+//                     {error}
+//                   </Alert>
+//                 </Fade>
+//               )}
+
+//               {success && (
+//                 <Fade in>
+//                   <Alert
+//                     severity="success"
+//                     sx={{ mb: 3 }}
+//                     icon={<CheckCircle />}
+//                   >
+//                     {success}
+//                   </Alert>
+//                 </Fade>
+//               )}
+
+//               <Divider sx={{ my: 3 }} />
+
+//               {/* Action Buttons */}
+//               <Box display="flex" flexWrap="wrap" gap={2} mb={3}>
+//                 <Button
+//                   variant="contained"
+//                   onClick={conversionFn}
+//                   disabled={csvData.length === 0 || isProcessing}
+//                   startIcon={<Transform />}
+//                   size="large"
+//                   sx={{ borderRadius: 2, minWidth: 180 }}
+//                 >
+//                   {isProcessing ? "Processing..." : "Convert & Generate QR"}
+//                 </Button>
+
+//                 {isConverted && (
+//                   <>
+//                     <Button
+//                       variant="contained"
+//                       color="success"
+//                       onClick={downloadJson}
+//                       startIcon={<GetApp />}
+//                       size="large"
+//                       sx={{ borderRadius: 2, minWidth: 160 }}
+//                     >
+//                       Download JSON
+//                     </Button>
+
+//                     {qrCodes.length > 0 && (
+//                       <>
+//                         <Button
+//                           variant="contained"
+//                           color="secondary"
+//                           onClick={downloadAllQRCodes}
+//                           startIcon={<Download />}
+//                           size="large"
+//                           sx={{ borderRadius: 2 }}
+//                         >
+//                           Download All QR Codes
+//                         </Button>
+
+//                         <Button
+//                           variant="contained"
+//                           color="info"
+//                           onClick={printAllQRCodesThermal}
+//                           startIcon={<Print />}
+//                           size="large"
+//                           sx={{ borderRadius: 2 }}
+//                         >
+//                           Print All QR (Multiple/Page)
+//                         </Button>
+//                       </>
+//                     )}
+//                   </>
+//                 )}
+
+//                 {(fileName || isConverted) && (
+//                   <Button
+//                     variant="outlined"
+//                     color="secondary"
+//                     onClick={resetConverter}
+//                     startIcon={<Refresh />}
+//                     size="large"
+//                     sx={{ borderRadius: 2 }}
+//                   >
+//                     Reset
+//                   </Button>
+//                 )}
+//               </Box>
+
+//               {/* QR Codes Grid - Scrollable */}
+//               {qrCodes.length > 0 && (
+//                 <Fade in>
+//                   <Box mb={4}>
+//                     <Typography
+//                       variant="h6"
+//                       gutterBottom
+//                       color="primary"
+//                       sx={{
+//                         display: "flex",
+//                         alignItems: "center",
+//                         mb: 2,
+//                       }}
+//                     >
+//                       <QrCode sx={{ mr: 1 }} />
+//                       Generated QR Codes ({qrCodes.length}) - Multiple Per Page
+//                       Print Ready
+//                     </Typography>
+//                     <Box
+//                       sx={{
+//                         maxHeight: "500px",
+//                         overflowY: "auto",
+//                         border: "1px solid #ddd",
+//                         borderRadius: 2,
+//                         p: 2,
+//                         backgroundColor: "rgba(255,255,255,0.05)",
+//                       }}
+//                     >
+//                       <Grid container spacing={2}>
+//                         {qrCodes.map((qr) => (
+//                           <Grid item xs={12} sm={6} md={4} lg={3} key={qr.id}>
+//                             <Card
+//                               elevation={3}
+//                               sx={{
+//                                 cursor: "pointer",
+//                                 transition: "transform 0.2s",
+//                                 "&:hover": {
+//                                   transform: "scale(1.02)",
+//                                 },
+//                               }}
+//                               onClick={() => openQrModal(qr)}
+//                             >
+//                               <CardContent sx={{ textAlign: "center", p: 2 }}>
+//                                 <img
+//                                   src={qr.qrUrl}
+//                                   alt={`QR Code for ${qr.primaryLot}`}
+//                                   style={{
+//                                     width: "100%",
+//                                     maxWidth: "150px",
+//                                     height: "auto",
+//                                     marginBottom: "8px",
+//                                   }}
+//                                 />
+//                                 <Typography
+//                                   variant="body2"
+//                                   color="primary"
+//                                   fontWeight="bold"
+//                                 >
+//                                   {qr.primaryLot}
+//                                 </Typography>
+//                               </CardContent>
+//                             </Card>
+//                           </Grid>
+//                         ))}
+//                       </Grid>
+//                     </Box>
+//                   </Box>
+//                 </Fade>
+//               )}
+//             </CardContent>
+//           </Card>
+//         </Fade>
+
+//         {/* QR Code Modal */}
+//         <Dialog
+//           open={showQrModal}
+//           onClose={() => setShowQrModal(false)}
+//           maxWidth="sm"
+//           fullWidth
+//         >
+//           <DialogTitle
+//             sx={{
+//               display: "flex",
+//               justifyContent: "space-between",
+//               alignItems: "center",
+//             }}
+//           >
+//             QR Code Details
+//             <IconButton onClick={() => setShowQrModal(false)}>
+//               <Close />
+//             </IconButton>
+//           </DialogTitle>
+//           <DialogContent sx={{ textAlign: "center" }}>
+//             {selectedQr && (
+//               <>
+//                 <img
+//                   src={selectedQr.qrUrl}
+//                   alt={`QR Code for ${selectedQr.primaryLot}`}
+//                   style={{
+//                     width: "300px",
+//                     height: "300px",
+//                     marginBottom: "16px",
+//                   }}
+//                 />
+//                 <Typography variant="h6" color="primary" gutterBottom>
+//                   {selectedQr.primaryLot}
+//                 </Typography>
+//               </>
+//             )}
+//           </DialogContent>
+//           <DialogActions sx={{ justifyContent: "center", gap: 1 }}>
+//             <Button
+//               onClick={() => {
+//                 if (selectedQr) {
+//                   const a = document.createElement("a");
+//                   a.href = selectedQr.qrUrl;
+//                   a.download = `QR_${selectedQr.primaryLot}.png`;
+//                   document.body.appendChild(a);
+//                   a.click();
+//                   document.body.removeChild(a);
+//                 }
+//               }}
+//               startIcon={<Download />}
+//               variant="contained"
+//               color="secondary"
+//             >
+//               Download
+//             </Button>
+//             <Button
+//               onClick={() => {
+//                 if (selectedQr) {
+//                   printSingleQRThermal(selectedQr);
+//                 }
+//               }}
+//               startIcon={<Print />}
+//               variant="contained"
+//               color="info"
+//             >
+//               Print Single (1x1")
+//             </Button>
+//           </DialogActions>
+//         </Dialog>
+//       </Container>
+//     </Box>
+//   );
+// }
+
+// export default FileUpload;
+
+// import React, { useState, useEffect } from "react";
+// import Papa from "papaparse";
+// import {
+//   Box,
+//   Card,
+//   CardContent,
+//   Typography,
+//   Button,
+//   Alert,
+//   LinearProgress,
+//   Chip,
+//   Paper,
+//   Container,
+//   Grid,
+//   IconButton,
+//   Tooltip,
+//   Divider,
+//   Dialog,
+//   DialogTitle,
+//   DialogContent,
+//   DialogActions,
+//   TextField,
+//   Select,
+//   MenuItem,
+//   FormControl,
+//   InputLabel,
+//   Switch,
+//   FormControlLabel,
+//   List,
+//   ListItem,
+//   ListItemText,
+//   ListItemIcon,
+//   Accordion,
+//   AccordionSummary,
+//   AccordionDetails,
+// } from "@mui/material";
+// import {
+//   CloudUpload,
+//   GetApp,
+//   Refresh,
+//   CheckCircle,
+//   Error,
+//   Description,
+//   Transform,
+//   QrCode,
+//   Download,
+//   Close,
+//   Print,
+//   Settings,
+//   Bluetooth,
+//   Usb,
+//   Wifi,
+//   ExpandMore,
+//   Save,
+//   History,
+// } from "@mui/icons-material";
+
+// function ThermalPrinterCSVConverter() {
+//   const [csvData, setCsvData] = useState([]);
+//   const [jsonData, setJsonData] = useState("");
+//   const [fileName, setFileName] = useState("");
+//   const [isConverted, setIsConverted] = useState(false);
+//   const [error, setError] = useState("");
+//   const [isProcessing, setIsProcessing] = useState(false);
+//   const [dragOver, setDragOver] = useState(false);
+//   const [success, setSuccess] = useState("");
+//   const [qrCodes, setQrCodes] = useState([]);
+//   const [showQrModal, setShowQrModal] = useState(false);
+//   const [selectedQr, setSelectedQr] = useState(null);
+
+//   // Thermal printer states
+//   const [printerConnected, setPrinterConnected] = useState(false);
+//   const [printerDevice, setPrinterDevice] = useState(null);
+//   const [printerPort, setPrinterPort] = useState(null);
+//   const [printerType, setPrinterType] = useState("usb"); // 'usb', 'bluetooth', 'network'
+//   const [printerSettings, setPrinterSettings] = useState({
+//     baudRate: 9600,
+//     dataBits: 8,
+//     stopBits: 1,
+//     parity: "none",
+//     paperWidth: 58, // 58mm or 80mm
+//     qrSize: "medium", // small, medium, large
+//   });
+//   const [showPrinterSettings, setShowPrinterSettings] = useState(false);
+//   const [printedQRIds, setPrintedQRIds] = useState([]);
+//   const [autoPrint, setAutoPrint] = useState(false);
+//   const [printQueue, setPrintQueue] = useState([]);
+//   const [isPrinting, setIsPrinting] = useState(false);
+
+//   // ESC/POS commands for thermal printer
+//   const ESC = "\x1B";
+//   const GS = "\x1D";
+//   const commands = {
+//     INIT: ESC + "@",
+//     FEED_LINE: "\n",
+//     CUT_PAPER: GS + "V\x42\x00",
+//     CENTER_ALIGN: ESC + "a\x01",
+//     LEFT_ALIGN: ESC + "a\x00",
+//     BOLD_ON: ESC + "E\x01",
+//     BOLD_OFF: ESC + "E\x00",
+//     QR_CODE: (data, size = 6) => {
+//       // ESC/POS QR code command
+//       const qrCommand =
+//         GS + "(k" + String.fromCharCode(data.length + 3, 0) + "1Q0" + data;
+//       const sizeCommand = GS + "(k\x03\x00\x31\x43" + String.fromCharCode(size);
+//       const printCommand = GS + "(k\x03\x00\x31\x51\x30";
+//       return sizeCommand + qrCommand + printCommand;
+//     },
+//   };
+
+//   // Connect to thermal printer
+//   const connectThermalPrinter = async (type = "usb") => {
+//     try {
+//       setError("");
+//       setIsProcessing(true);
+
+//       if (type === "usb" && "serial" in navigator) {
+//         // Web Serial API for USB connection
+//         const port = await navigator.serial.requestPort();
+//         await port.open({
+//           baudRate: printerSettings.baudRate,
+//           dataBits: printerSettings.dataBits,
+//           stopBits: printerSettings.stopBits,
+//           parity: printerSettings.parity,
+//         });
+
+//         setPrinterPort(port);
+//         setPrinterConnected(true);
+//         setSuccess("Thermal printer connected via USB!");
+//       } else if (type === "bluetooth" && "bluetooth" in navigator) {
+//         // Web Bluetooth API
+//         const device = await navigator.bluetooth.requestDevice({
+//           filters: [{ services: ["000018f0-0000-1000-8000-00805f9b34fb"] }],
+//           optionalServices: ["00001800-0000-1000-8000-00805f9b34fb"],
+//         });
+//         console.log(device)
+
+//         const server = await device.gatt.connect();
+//         console.log(server)
+//         setPrinterDevice(device);
+//         setPrinterConnected(true);
+//         setSuccess("Thermal printer connected via Bluetooth!");
+//       } else if (type === "network") {
+//         // For network printers, you might need a different approach
+//         // This is a placeholder - implement based on your network printer protocol
+//         setSuccess("Network printer connection not yet implemented");
+//       } else {
+//         throw new Error("Selected connection method not supported by browser");
+//       }
+//     } catch (err) {
+//       setError(`Failed to connect printer: ${err.message}`);
+//       setPrinterConnected(false);
+//     } finally {
+//       setIsProcessing(false);
+//     }
+//   };
+
+//   // Disconnect thermal printer
+//   const disconnectThermalPrinter = async () => {
+//     try {
+//       if (printerPort) {
+//         await printerPort.close();
+//         setPrinterPort(null);
+//       }
+//       if (printerDevice && printerDevice.gatt.connected) {
+//         printerDevice.gatt.disconnect();
+//         setPrinterDevice(null);
+//       }
+//       setPrinterConnected(false);
+//       setSuccess("Printer disconnected");
+//     } catch (err) {
+//       setError(`Error disconnecting printer: ${err.message}`);
+//     }
+//   };
+
+//   // Send data to thermal printer
+//   const sendToPrinter = async (data) => {
+//     if (!printerConnected) {
+//       throw new Error("Printer not connected");
+//     }
+
+//     try {
+//       if (printerPort) {
+//         // USB Serial connection
+//         const writer = printerPort.writable.getWriter();
+//         const encoder = new TextEncoder();
+//         await writer.write(encoder.encode(data));
+//         writer.releaseLock();
+//       } else if (printerDevice) {
+//         // Bluetooth connection - implement based on your printer's GATT services
+//         // This is a simplified example
+//         const encoder = new TextEncoder();
+//         const dataArray = encoder.encode(data);
+//         // You'll need to write to the appropriate GATT characteristic
+//         // Implementation depends on your specific thermal printer model
+//       }
+//     } catch (err) {
+//       throw new Error(`Failed to send data to printer: ${err.message}`);
+//     }
+//   };
+
+//   // Print QR code to thermal printer
+//   const printQRToThermal = async (qrData, primaryLot) => {
+//     if (!printerConnected) {
+//       setError("Please connect thermal printer first");
+//       return false;
+//     }
+
+//     try {
+//       setIsPrinting(true);
+
+//       // Create thermal printer command sequence
+//       let printData = commands.INIT; // Initialize printer
+//       printData += commands.CENTER_ALIGN; // Center alignment
+//       printData += commands.BOLD_ON;
+//       printData += `QR CODE\n`;
+//       printData += commands.BOLD_OFF;
+//       printData += commands.FEED_LINE;
+
+//       // Add QR code
+//       const qrSize =
+//         printerSettings.qrSize === "small"
+//           ? 4
+//           : printerSettings.qrSize === "large"
+//           ? 8
+//           : 6;
+//       printData += commands.QR_CODE(primaryLot, qrSize);
+//       printData += commands.FEED_LINE;
+//       printData += commands.FEED_LINE;
+
+//       // Add text
+//       printData += commands.CENTER_ALIGN;
+//       printData += commands.BOLD_ON;
+//       printData += `${primaryLot}\n`;
+//       printData += commands.BOLD_OFF;
+//       printData += commands.FEED_LINE;
+//       printData += commands.FEED_LINE;
+//       printData += commands.FEED_LINE;
+//       printData += commands.CUT_PAPER; // Cut paper
+
+//       // Send to printer
+//       await sendToPrinter(printData);
+
+//       // Save printed QR ID to backend
+//       await savePrintedQRToBackend(primaryLot, qrData);
+
+//       // Add to printed list
+//       setPrintedQRIds((prev) => [
+//         ...prev,
+//         {
+//           id: primaryLot,
+//           timestamp: new Date().toISOString(),
+//           status: "printed_and_saved",
+//         },
+//       ]);
+
+//       setSuccess(`QR code for ${primaryLot} printed and saved successfully!`);
+//       return true;
+//     } catch (err) {
+//       setError(`Printing failed: ${err.message}`);
+//       return false;
+//     } finally {
+//       setIsPrinting(false);
+//     }
+//   };
+
+//   // Save printed QR ID to backend
+//   const savePrintedQRToBackend = async (primaryLot, qrData) => {
+//     try {
+    
+//     } catch (err) {
+     
+//     }
+//   };
+
+//   // Print all QR codes in queue
+//   const printAllQRCodes = async () => {
+//     if (qrCodes.length === 0) {
+//       setError("No QR codes to print");
+//       return;
+//     }
+
+//     setIsPrinting(true);
+//     let successCount = 0;
+//     let failCount = 0;
+
+//     for (const qr of qrCodes) {
+//       try {
+//         const success = await printQRToThermal(qr, qr.primaryLot);
+//         if (success) {
+//           successCount++;
+//         } else {
+//           failCount++;
+//         }
+//         // Small delay between prints
+//         await new Promise((resolve) => setTimeout(resolve, 1000));
+//       } catch (err) {
+//         failCount++;
+//         console.error(`Failed to print ${qr.primaryLot}:`, err);
+//       }
+//     }
+
+//     setIsPrinting(false);
+//     setSuccess(
+//       `Printing completed: ${successCount} successful, ${failCount} failed`
+//     );
+//   };
+
+//   const generateQRCode = (text, size = 200) => {
+//     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(
+//       text
+//     )}`;
+//     return qrUrl;
+//   };
+
+//   const csvUploadFn = (file) => {
+//     if (!file) return;
+
+//     const fileType = file.name.split(".").pop().toLowerCase();
+//     if (fileType !== "csv") {
+//       setError("Please upload a CSV file.");
+//       return;
+//     }
+
+//     setError("");
+//     setSuccess("");
+//     setIsProcessing(true);
+//     setFileName(file.name);
+
+//     Papa.parse(file, {
+//       complete: (result) => {
+//         if (result.errors.length > 0) {
+//           setError("Error parsing CSV file. Please check the file format.");
+//           setIsProcessing(false);
+//           return;
+//         }
+//         setCsvData(result.data);
+//         setIsProcessing(false);
+//         setSuccess(
+//           `Successfully loaded ${result.data.length} rows from CSV file.`
+//         );
+//       },
+//       header: true,
+//       skipEmptyLines: true,
+//       dynamicTyping: true,
+//       error: (error) => {
+//         setError(
+//           "Failed to parse CSV file. Please ensure it's properly formatted."
+//         );
+//         setIsProcessing(false);
+//       },
+//     });
+//   };
+
+//   const handleFileInput = (event) => {
+//     const file = event.target.files[0];
+//     csvUploadFn(file);
+//   };
+
+//   const handleDrop = (event) => {
+//     event.preventDefault();
+//     setDragOver(false);
+//     const file = event.dataTransfer.files[0];
+//     csvUploadFn(file);
+//   };
+
+//   const handleDragOver = (event) => {
+//     event.preventDefault();
+//     setDragOver(true);
+//   };
+
+//   const handleDragLeave = (event) => {
+//     event.preventDefault();
+//     setDragOver(false);
+//   };
+
+//   const conversionFn = () => {
+//     if (csvData.length === 0) {
+//       setError("No CSV data to convert");
+//       return;
+//     }
+
+//     const res = JSON.stringify(csvData, null, 2);
+//     setJsonData(res);
+//     setIsConverted(true);
+//     setError("");
+//     setSuccess("CSV successfully converted to JSON format!");
+
+//     // Generate QR codes
+//     generateQRCodes();
+//   };
+
+//   const generateQRCodes = () => {
+//     const qrList = [];
+
+//     csvData.forEach((row, index) => {
+//       const primaryLot =
+//         row["Primary LOT"] ||
+//         row["Primary IOT"] ||
+//         row["primary_lot"] ||
+//         row["primary_iot"];
+
+//       if (primaryLot) {
+//         const qrUrl = generateQRCode(primaryLot, 300);
+//         qrList.push({
+//           id: index,
+//           primaryLot: primaryLot,
+//           loyaltyId: row["Loyalty ID"] || row["loyalty_id"] || "",
+//           qrUrl: qrUrl,
+//         });
+//       }
+//     });
+
+//     setQrCodes(qrList);
+
+//     if (autoPrint && printerConnected) {
+//       setPrintQueue(qrList);
+//     }
+//   };
+
+//   const downloadJson = () => {
+//     if (!jsonData) return;
+
+//     const blob = new Blob([jsonData], { type: "application/json" });
+//     const url = URL.createObjectURL(blob);
+//     const a = document.createElement("a");
+//     a.href = url;
+//     a.download = fileName.replace(".csv", ".json") || "converted-data.json";
+//     document.body.appendChild(a);
+//     a.click();
+//     document.body.removeChild(a);
+//     URL.revokeObjectURL(url);
+//   };
+
+//   const resetConverter = () => {
+//     setCsvData([]);
+//     setJsonData("");
+//     setFileName("");
+//     setIsConverted(false);
+//     setError("");
+//     setSuccess("");
+//     setIsProcessing(false);
+//     setQrCodes([]);
+//     setPrintedQRIds([]);
+//     setPrintQueue([]);
+//   };
+
+//   const openQrModal = (qr) => {
+//     setSelectedQr(qr);
+//     setShowQrModal(true);
+//   };
+
+//   return (
+//     <Box
+//       sx={{
+//         width: "100vw",
+//         minHeight: "100vh",
+//         background: `linear-gradient(135deg, #337ab7 0%, #2c6ba0 100%)`,
+//         py: 2,
+//       }}
+//     >
+//       <Container sx={{ height: "100%", width: "100%" }}>
+//         <Box textAlign="center" mb={4}>
+//           <Typography
+//             variant="h3"
+//             component="h1"
+//             gutterBottom
+//             sx={{
+//               color: "white",
+//               fontWeight: "bold",
+//               textShadow: "0 2px 4px rgba(0,0,0,0.3)",
+//             }}
+//           >
+//             CSV to JSON & Thermal QR Printer
+//           </Typography>
+//           <Typography variant="h6" sx={{ color: "rgba(255,255,255,0.9)" }}>
+//             Convert CSV to JSON and print QR codes directly to thermal printer
+//           </Typography>
+//         </Box>
+
+//         {/* Thermal Printer Connection Card */}
+//         <Card elevation={8} sx={{ mb: 4, borderRadius: 3 }}>
+//           <CardContent sx={{ p: 3 }}>
+//             <Typography
+//               variant="h6"
+//               gutterBottom
+//               color="primary"
+//               sx={{ display: "flex", alignItems: "center", mb: 2 }}
+//             >
+//               <Print sx={{ mr: 1 }} />
+//               Thermal Printer Connection
+//               <Chip
+//                 label={printerConnected ? "Connected" : "Disconnected"}
+//                 color={printerConnected ? "success" : "error"}
+//                 size="small"
+//                 sx={{ ml: 2 }}
+//               />
+//             </Typography>
+
+//             <Grid container spacing={2} alignItems="center">
+//               <Grid item xs={12} sm={6} md={3}>
+//                 <FormControl fullWidth size="small">
+//                   <InputLabel>Connection Type</InputLabel>
+//                   <Select
+//                     value={printerType}
+//                     onChange={(e) => setPrinterType(e.target.value)}
+//                     disabled={printerConnected}
+//                   >
+//                     <MenuItem value="usb">
+//                       <Usb sx={{ mr: 1 }} />
+//                       USB Serial
+//                     </MenuItem>
+//                     <MenuItem value="bluetooth">
+//                       <Bluetooth sx={{ mr: 1 }} />
+//                       Bluetooth
+//                     </MenuItem>
+//                     <MenuItem value="network">
+//                       <Wifi sx={{ mr: 1 }} />
+//                       Network
+//                     </MenuItem>
+//                   </Select>
+//                 </FormControl>
+//               </Grid>
+
+//               <Grid item xs={12} sm={6} md={2}>
+//                 <FormControlLabel
+//                   control={
+//                     <Switch
+//                       checked={autoPrint}
+//                       onChange={(e) => setAutoPrint(e.target.checked)}
+//                     />
+//                   }
+//                   label="Auto Print"
+//                 />
+//               </Grid>
+
+//               <Grid item xs={12} sm={6} md={4}>
+//                 <Box display="flex" gap={1}>
+//                   {!printerConnected ? (
+//                     <Button
+//                       variant="contained"
+//                       onClick={() => connectThermalPrinter(printerType)}
+//                       disabled={isProcessing}
+//                       size="small"
+//                     >
+//                       Connect Printer
+//                     </Button>
+//                   ) : (
+//                     <Button
+//                       variant="outlined"
+//                       onClick={disconnectThermalPrinter}
+//                       startIcon={<Close />}
+//                       size="small"
+//                     >
+//                       Disconnect
+//                     </Button>
+//                   )}
+
+//                   <IconButton
+//                     onClick={() => setShowPrinterSettings(true)}
+//                     size="small"
+//                   >
+//                     <Settings />
+//                   </IconButton>
+//                 </Box>
+//               </Grid>
+//             </Grid>
+
+//             {printedQRIds.length > 0 && (
+//               <Accordion sx={{ mt: 2 }}>
+//                 <AccordionSummary expandIcon={<ExpandMore />}>
+//                   <Box display="flex" alignItems="center">
+//                     <History sx={{ mr: 1 }} />
+//                     <Typography>
+//                       Printed QR History ({printedQRIds.length})
+//                     </Typography>
+//                   </Box>
+//                 </AccordionSummary>
+//                 <AccordionDetails>
+//                   <List dense>
+//                     {printedQRIds.slice(-10).map((item, index) => (
+//                       <ListItem key={index}>
+//                         <ListItemIcon>
+//                           <CheckCircle color="success" fontSize="small" />
+//                         </ListItemIcon>
+//                         <ListItemText
+//                           primary={item.id}
+//                           secondary={new Date(item.timestamp).toLocaleString()}
+//                         />
+//                       </ListItem>
+//                     ))}
+//                   </List>
+//                 </AccordionDetails>
+//               </Accordion>
+//             )}
+//           </CardContent>
+//         </Card>
+
+//         {/* Main Converter Card */}
+//         <Card elevation={8} sx={{ mb: 4, borderRadius: 3 }}>
+//           <CardContent sx={{ p: 4 }}>
+//             {/* Upload Section */}
+//             <Typography
+//               variant="h5"
+//               gutterBottom
+//               color="primary"
+//               sx={{ display: "flex", alignItems: "center", mb: 3 }}
+//             >
+//               <CloudUpload sx={{ mr: 1 }} />
+//               Upload CSV File
+//             </Typography>
+
+//             <Paper
+//               variant="outlined"
+//               onDrop={handleDrop}
+//               onDragOver={handleDragOver}
+//               onDragLeave={handleDragLeave}
+//               sx={{
+//                 p: 4,
+//                 textAlign: "center",
+//                 border: dragOver ? "2px dashed #1976d2" : "2px dashed #ccc",
+//                 bgcolor: dragOver ? "action.hover" : "background.paper",
+//                 cursor: "pointer",
+//                 transition: "all 0.3s ease",
+//                 "&:hover": {
+//                   borderColor: "primary.main",
+//                   bgcolor: "action.hover",
+//                 },
+//                 mb: 3,
+//               }}
+//             >
+//               <Description
+//                 sx={{ fontSize: 48, color: "text.secondary", mb: 2 }}
+//               />
+//               <Typography variant="h6" gutterBottom>
+//                 Drag and drop your CSV file here
+//               </Typography>
+//               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+//                 or click the button below to browse files
+//               </Typography>
+
+//               <input
+//                 type="file"
+//                 onChange={handleFileInput}
+//                 accept=".csv"
+//                 style={{ display: "none" }}
+//                 id="csv-upload-input"
+//               />
+//               <label htmlFor="csv-upload-input">
+//                 <Button
+//                   variant="contained"
+//                   component="span"
+//                   startIcon={<CloudUpload />}
+//                   size="large"
+//                   sx={{ borderRadius: 2 }}
+//                 >
+//                   Choose CSV File
+//                 </Button>
+//               </label>
+//             </Paper>
+
+//             {/* File Status */}
+//             {fileName && (
+//               <Box mb={3}>
+//                 <Chip
+//                   icon={<CheckCircle />}
+//                   label={`File: ${fileName}`}
+//                   color="success"
+//                   variant="outlined"
+//                   sx={{ mr: 2 }}
+//                 />
+//                 {csvData.length > 0 && (
+//                   <Chip
+//                     label={`${csvData.length} rows loaded`}
+//                     color="info"
+//                     variant="outlined"
+//                   />
+//                 )}
+//               </Box>
+//             )}
+
+//             {/* Processing Indicator */}
+//             {(isProcessing || isPrinting) && (
+//               <Box mb={3}>
+//                 <LinearProgress sx={{ mb: 1 }} />
+//                 <Typography variant="body2" color="text.secondary">
+//                   {isPrinting
+//                     ? "Printing QR codes..."
+//                     : "Processing CSV file..."}
+//                 </Typography>
+//               </Box>
+//             )}
+
+//             {/* Alert Messages */}
+//             {error && (
+//               <Alert severity="error" sx={{ mb: 3 }} icon={<Error />}>
+//                 {error}
+//               </Alert>
+//             )}
+
+//             {success && (
+//               <Alert severity="success" sx={{ mb: 3 }} icon={<CheckCircle />}>
+//                 {success}
+//               </Alert>
+//             )}
+
+//             <Divider sx={{ my: 3 }} />
+
+//             {/* Action Buttons */}
+//             <Box display="flex" flexWrap="wrap" gap={2} mb={3}>
+//               <Button
+//                 variant="contained"
+//                 onClick={conversionFn}
+//                 disabled={csvData.length === 0 || isProcessing}
+//                 startIcon={<Transform />}
+//                 size="large"
+//                 sx={{ borderRadius: 2, minWidth: 180 }}
+//               >
+//                 {isProcessing ? "Processing..." : "Convert & Generate QR"}
+//               </Button>
+
+//               {isConverted && (
+//                 <>
+//                   <Button
+//                     variant="contained"
+//                     color="success"
+//                     onClick={downloadJson}
+//                     startIcon={<GetApp />}
+//                     size="large"
+//                     sx={{ borderRadius: 2, minWidth: 160 }}
+//                   >
+//                     Download JSON
+//                   </Button>
+
+//                   {qrCodes.length > 0 && printerConnected && (
+//                     <Button
+//                       variant="contained"
+//                       color="secondary"
+//                       onClick={printAllQRCodes}
+//                       disabled={isPrinting}
+//                       startIcon={<Print />}
+//                       size="large"
+//                       sx={{ borderRadius: 2 }}
+//                     >
+//                       {isPrinting
+//                         ? "Printing..."
+//                         : `Print All QR (${qrCodes.length})`}
+//                     </Button>
+//                   )}
+//                 </>
+//               )}
+
+//               {(fileName || isConverted) && (
+//                 <Button
+//                   variant="outlined"
+//                   color="secondary"
+//                   onClick={resetConverter}
+//                   startIcon={<Refresh />}
+//                   size="large"
+//                   sx={{ borderRadius: 2 }}
+//                 >
+//                   Reset
+//                 </Button>
+//               )}
+//             </Box>
+
+//             {/* QR Codes Grid */}
+//             {qrCodes.length > 0 && (
+//               <Box mb={4}>
+//                 <Typography
+//                   variant="h6"
+//                   gutterBottom
+//                   color="primary"
+//                   sx={{ display: "flex", alignItems: "center", mb: 2 }}
+//                 >
+//                   <QrCode sx={{ mr: 1 }} />
+//                   Generated QR Codes ({qrCodes.length})
+//                 </Typography>
+//                 <Box
+//                   sx={{
+//                     maxHeight: "500px",
+//                     overflowY: "auto",
+//                     border: "1px solid #ddd",
+//                     borderRadius: 2,
+//                     p: 2,
+//                     backgroundColor: "rgba(255,255,255,0.05)",
+//                   }}
+//                 >
+//                   <Grid container spacing={2}>
+//                     {qrCodes.map((qr) => (
+//                       <Grid item xs={12} sm={6} md={4} lg={3} key={qr.id}>
+//                         <Card
+//                           elevation={3}
+//                           sx={{
+//                             cursor: "pointer",
+//                             transition: "transform 0.2s",
+//                             "&:hover": {
+//                               transform: "scale(1.02)",
+//                             },
+//                           }}
+//                           onClick={() => openQrModal(qr)}
+//                         >
+//                           <CardContent sx={{ textAlign: "center", p: 2 }}>
+//                             <img
+//                               src={qr.qrUrl}
+//                               alt={`QR Code for ${qr.primaryLot}`}
+//                               style={{
+//                                 width: "100%",
+//                                 maxWidth: "150px",
+//                                 height: "auto",
+//                                 marginBottom: "8px",
+//                               }}
+//                             />
+//                             <Typography
+//                               variant="body2"
+//                               color="primary"
+//                               fontWeight="bold"
+//                             >
+//                               {qr.primaryLot}
+//                             </Typography>
+//                             {printerConnected && (
+//                               <Button
+//                                 size="small"
+//                                 variant="outlined"
+//                                 onClick={(e) => {
+//                                   e.stopPropagation();
+//                                   printQRToThermal(qr, qr.primaryLot);
+//                                 }}
+//                                 disabled={isPrinting}
+//                                 sx={{ mt: 1 }}
+//                               >
+//                                 Print
+//                               </Button>
+//                             )}
+//                           </CardContent>
+//                         </Card>
+//                       </Grid>
+//                     ))}
+//                   </Grid>
+//                 </Box>
+//               </Box>
+//             )}
+//           </CardContent>
+//         </Card>
+
+//         {/* QR Code Modal */}
+//         <Dialog
+//           open={showQrModal}
+//           onClose={() => setShowQrModal(false)}
+//           maxWidth="sm"
+//           fullWidth
+//         >
+//           <DialogTitle
+//             sx={{
+//               display: "flex",
+//               justifyContent: "space-between",
+//               alignItems: "center",
+//             }}
+//           >
+//             QR Code Details
+//             <IconButton onClick={() => setShowQrModal(false)}>
+//               <Close />
+//             </IconButton>
+//           </DialogTitle>
+//           <DialogContent sx={{ textAlign: "center" }}>
+//             {selectedQr && (
+//               <>
+//                 <img
+//                   src={selectedQr.qrUrl}
+//                   alt={`QR Code for ${selectedQr.primaryLot}`}
+//                   style={{
+//                     width: "300px",
+//                     height: "300px",
+//                     marginBottom: "16px",
+//                   }}
+//                 />
+//                 <Typography variant="h6" color="primary" gutterBottom>
+//                   {selectedQr.primaryLot}
+//                 </Typography>
+//               </>
+//             )}
+//           </DialogContent>
+//           <DialogActions sx={{ justifyContent: "center", gap: 1 }}>
+//             <Button
+//               onClick={() => {
+//                 if (selectedQr) {
+//                   const a = document.createElement("a");
+//                   a.href = selectedQr.qrUrl;
+//                   a.download = `QR_${selectedQr.primaryLot}.png`;
+//                   document.body.appendChild(a);
+//                   a.click();
+//                   document.body.removeChild(a);
+//                 }
+//               }}
+//               startIcon={<Download />}
+//               variant="contained"
+//               color="secondary"
+//             >
+//               Download
+//             </Button>
+//             {printerConnected && (
+//               <Button
+//                 onClick={() => {
+//                   if (selectedQr) {
+//                     printQRToThermal(selectedQr, selectedQr.primaryLot);
+//                   }
+//                 }}
+//                 startIcon={<Print />}
+//                 variant="contained"
+//                 color="info"
+//                 disabled={isPrinting}
+//               >
+//                 Print to Thermal
+//               </Button>
+//             )}
+//           </DialogActions>
+//         </Dialog>
+
+//         {/* Printer Settings Dialog */}
+//         <Dialog
+//           open={showPrinterSettings}
+//           onClose={() => setShowPrinterSettings(false)}
+//           maxWidth="sm"
+//           fullWidth
+//         >
+//           <DialogTitle>Thermal Printer Settings</DialogTitle>
+//           <DialogContent>
+//             <Grid container spacing={2} sx={{ mt: 1 }}>
+//               <Grid item xs={12} sm={6}>
+//                 <TextField
+//                   fullWidth
+//                   label="Baud Rate"
+//                   type="number"
+//                   value={printerSettings.baudRate}
+//                   onChange={(e) =>
+//                     setPrinterSettings({
+//                       ...printerSettings,
+//                       baudRate: parseInt(e.target.value),
+//                     })
+//                   }
+//                   disabled={printerConnected}
+//                 />
+//               </Grid>
+//               <Grid item xs={12} sm={6}>
+//                 <TextField
+//                   fullWidth
+//                   label="Data Bits"
+//                   type="number"
+//                   value={printerSettings.dataBits}
+//                   onChange={(e) =>
+//                     setPrinterSettings({
+//                       ...printerSettings,
+//                       dataBits: parseInt(e.target.value),
+//                     })
+//                   }
+//                   disabled={printerConnected}
+//                 />
+//               </Grid>
+//               <Grid item xs={12} sm={6}>
+//                 <TextField
+//                   fullWidth
+//                   label="Stop Bits"
+//                   type="number"
+//                   value={printerSettings.stopBits}
+//                   onChange={(e) =>
+//                     setPrinterSettings({
+//                       ...printerSettings,
+//                       stopBits: parseInt(e.target.value),
+//                     })
+//                   }
+//                   disabled={printerConnected}
+//                 />
+//               </Grid>
+//               <Grid item xs={12} sm={6}>
+//                 <FormControl fullWidth>
+//                   <InputLabel>Parity</InputLabel>
+//                   <Select
+//                     value={printerSettings.parity}
+//                     onChange={(e) =>
+//                       setPrinterSettings({
+//                         ...printerSettings,
+//                         parity: e.target.value,
+//                       })
+//                     }
+//                     disabled={printerConnected}
+//                   >
+//                     <MenuItem value="none">None</MenuItem>
+//                     <MenuItem value="even">Even</MenuItem>
+//                     <MenuItem value="odd">Odd</MenuItem>
+//                   </Select>
+//                 </FormControl>
+//               </Grid>
+//               <Grid item xs={12} sm={6}>
+//                 <FormControl fullWidth>
+//                   <InputLabel>Paper Width</InputLabel>
+//                   <Select
+//                     value={printerSettings.paperWidth}
+//                     onChange={(e) =>
+//                       setPrinterSettings({
+//                         ...printerSettings,
+//                         paperWidth: e.target.value,
+//                       })
+//                     }
+//                   >
+//                     <MenuItem value={58}>58mm</MenuItem>
+//                     <MenuItem value={80}>80mm</MenuItem>
+//                   </Select>
+//                 </FormControl>
+//               </Grid>
+//               <Grid item xs={12} sm={6}>
+//                 <FormControl fullWidth>
+//                   <InputLabel>QR Code Size</InputLabel>
+//                   <Select
+//                     value={printerSettings.qrSize}
+//                     onChange={(e) =>
+//                       setPrinterSettings({
+//                         ...printerSettings,
+//                         qrSize: e.target.value,
+//                       })
+//                     }
+//                   >
+//                     <MenuItem value="small">Small</MenuItem>
+//                     <MenuItem value="medium">Medium</MenuItem>
+//                     <MenuItem value="large">Large</MenuItem>
+//                   </Select>
+//                 </FormControl>
+//               </Grid>
+//             </Grid>
+//           </DialogContent>
+//           <DialogActions>
+//             <Button onClick={() => setShowPrinterSettings(false)}>
+//               Cancel
+//             </Button>
+//             <Button
+//               onClick={() => {
+//                 setShowPrinterSettings(false);
+//                 setSuccess("Printer settings saved successfully!");
+//               }}
+//               variant="contained"
+//               startIcon={<Save />}
+//             >
+//               Save Settings
+//             </Button>
+//           </DialogActions>
+//         </Dialog>
+
+//         {/* JSON Output Display */}
+//         {isConverted && jsonData && (
+//           <Card elevation={8} sx={{ mb: 4, borderRadius: 3 }}>
+//             <CardContent sx={{ p: 3 }}>
+//               <Typography
+//                 variant="h6"
+//                 gutterBottom
+//                 color="primary"
+//                 sx={{ display: "flex", alignItems: "center", mb: 2 }}
+//               >
+//                 <Transform sx={{ mr: 1 }} />
+//                 JSON Output
+//               </Typography>
+//               <Paper
+//                 variant="outlined"
+//                 sx={{
+//                   p: 2,
+//                   backgroundColor: "#f5f5f5",
+//                   maxHeight: "400px",
+//                   overflow: "auto",
+//                   borderRadius: 2,
+//                 }}
+//               >
+//                 <pre
+//                   style={{
+//                     margin: 0,
+//                     fontFamily:
+//                       'Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+//                     fontSize: "12px",
+//                     lineHeight: "1.4",
+//                     whiteSpace: "pre-wrap",
+//                     wordBreak: "break-word",
+//                   }}
+//                 >
+//                   {jsonData}
+//                 </pre>
+//               </Paper>
+//             </CardContent>
+//           </Card>
+//         )}
+//       </Container>
+//     </Box>
+//   );
+// }
+
+// export default ThermalPrinterCSVConverter;
+
+
+import React, { useState, useEffect } from "react";
+import Papa from "papaparse";
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Button,
+  Alert,
+  LinearProgress,
+  Chip,
+  Paper,
+  Container,
+  Grid,
+  IconButton,
+  Tooltip,
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Switch,
+  FormControlLabel,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+} from "@mui/material";
+import {
+  CloudUpload,
+  GetApp,
+  Refresh,
+  CheckCircle,
+  Error,
+  Description,
+  Transform,
+  QrCode,
+  Download,
+  Close,
+  Print,
+  Settings,
+  Bluetooth,
+  Usb,
+  Wifi,
+  ExpandMore,
+  Save,
+  History,
+  NetworkCheck,
+  WifiOff,
+} from "@mui/icons-material";
+
+function ThermalPrinterCSVConverter() {
+  const [csvData, setCsvData] = useState([]);
+  const [jsonData, setJsonData] = useState("");
+  const [fileName, setFileName] = useState("");
+  const [isConverted, setIsConverted] = useState(false);
+  const [error, setError] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [success, setSuccess] = useState("");
+  const [qrCodes, setQrCodes] = useState([]);
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [selectedQr, setSelectedQr] = useState(null);
+
+  // Thermal printer states
+  const [printerConnected, setPrinterConnected] = useState(false);
+  const [printerDevice, setPrinterDevice] = useState(null);
+  const [printerPort, setPrinterPort] = useState(null);
+  const [networkSocket, setNetworkSocket] = useState(null);
+  const [printerType, setPrinterType] = useState("usb"); // 'usb', 'bluetooth', 'network'
+  const [printerSettings, setPrinterSettings] = useState({
+    baudRate: 9600,
+    dataBits: 8,
+    stopBits: 1,
+    parity: "none",
+    paperWidth: 58, // 58mm or 80mm
+    qrSize: "medium", // small, medium, large
+    // Network settings
+    networkHost: "192.168.1.100",
+    networkPort: 9100,
+    connectionTimeout: 5000,
+    keepAlive: true,
+    reconnectAttempts: 3,
+  });
+  const [showPrinterSettings, setShowPrinterSettings] = useState(false);
+  const [printedQRIds, setPrintedQRIds] = useState([]);
+  const [autoPrint, setAutoPrint] = useState(false);
+  const [printQueue, setPrintQueue] = useState([]);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [networkStatus, setNetworkStatus] = useState("disconnected"); // 'connecting', 'connected', 'disconnected', 'error'
+
+  // ESC/POS commands for thermal printer
+  const ESC = "\x1B";
+  const GS = "\x1D";
+  const commands = {
+    INIT: ESC + "@",
+    FEED_LINE: "\n",
+    CUT_PAPER: GS + "V\x42\x00",
+    CENTER_ALIGN: ESC + "a\x01",
+    LEFT_ALIGN: ESC + "a\x00",
+    BOLD_ON: ESC + "E\x01",
+    BOLD_OFF: ESC + "E\x00",
+    QR_CODE: (data, size = 6) => {
+      // ESC/POS QR code command
+      const qrCommand =
+        GS + "(k" + String.fromCharCode(data.length + 3, 0) + "1Q0" + data;
+      const sizeCommand = GS + "(k\x03\x00\x31\x43" + String.fromCharCode(size);
+      const printCommand = GS + "(k\x03\x00\x31\x51\x30";
+      return sizeCommand + qrCommand + printCommand;
+    },
+  };
+
+  // Network printer connection implementation
+  const connectNetworkPrinter = async (host, port, timeout = 5000) => {
+    return new Promise((resolve, reject) => {
+      try {
+        // Create WebSocket connection for network printer
+        const wsUrl = `ws://${host}:${port}`;
+        const socket = new WebSocket(wsUrl);
+        
+        const timeoutId = setTimeout(() => {
+          socket.close();
+          reject(new Error(`Connection timeout after ${timeout}ms`));
+        }, timeout);
+
+        socket.onopen = () => {
+          clearTimeout(timeoutId);
+          setNetworkSocket(socket);
+          setNetworkStatus("connected");
+          resolve(socket);
+        };
+
+        socket.onerror = (error) => {
+          clearTimeout(timeoutId);
+          setNetworkStatus("error");
+          reject(new Error(`WebSocket connection failed: ${error.message || 'Unknown error'}`));
+        };
+
+        socket.onclose = () => {
+          setNetworkStatus("disconnected");
+          setNetworkSocket(null);
+        };
+
+        setNetworkStatus("connecting");
+      } catch (error) {
+        setNetworkStatus("error");
+        reject(error);
+      }
+    });
+  };
+
+  // Alternative TCP connection using fetch for HTTP-based network printers
+  const connectHttpNetworkPrinter = async (host, port) => {
+    try {
+      const testUrl = `http://${host}:${port}/status`;
+      const response = await fetch(testUrl, {
+        method: 'GET',
+        timeout: printerSettings.connectionTimeout,
+      });
+      
+      if (response.ok) {
+        return { type: 'http', host, port };
+      } else {
+        throw new Error(`HTTP connection failed with status: ${response.status}`);
+      }
+    } catch (error) {
+      throw new Error(`HTTP connection failed: ${error.message}`);
+    }
+  };
+
+  // Raw TCP connection simulation (for demonstration - real implementation would need a proxy server)
+  const simulateRawTcpConnection = async (host, port) => {
+    // In a real-world scenario, you'd need a WebSocket-to-TCP proxy server
+    // or use Node.js with the 'net' module for raw TCP connections
+    
+    // This is a simulation for demonstration purposes
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        // Simulate connection success/failure
+        if (host && port && port > 0 && port < 65536) {
+          resolve({ type: 'tcp', host, port, connected: true });
+        } else {
+          reject(new Error('Invalid host or port'));
+        }
+      }, 1000);
+    });
+  };
+
+  // Send data to network printer
+  const sendToNetworkPrinter = async (data) => {
+    if (networkSocket && networkSocket.readyState === WebSocket.OPEN) {
+      // WebSocket connection
+      const encoder = new TextEncoder();
+      const binaryData = encoder.encode(data);
+      networkSocket.send(binaryData);
+    } else if (printerDevice && printerDevice.type === 'http') {
+      // HTTP-based printer
+      const response = await fetch(`http://${printerDevice.host}:${printerDevice.port}/print`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/octet-stream',
+        },
+        body: data,
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP print failed with status: ${response.status}`);
+      }
+    } else if (printerDevice && printerDevice.type === 'tcp') {
+      // For raw TCP, you would typically use a WebSocket-to-TCP bridge
+      // This is a placeholder for the actual implementation
+      console.log('Sending to TCP printer:', data);
+    } else {
+      throw new Error('No valid network connection available');
+    }
+  };
+
+  // Test network printer connection
+  const testNetworkConnection = async () => {
+    try {
+      setIsProcessing(true);
+      setError("");
+      
+      const { networkHost, networkPort } = printerSettings;
+      
+      // Try different connection methods
+      let connectionResult = null;
+      
+      try {
+        // First, try WebSocket connection
+        connectionResult = await connectNetworkPrinter(networkHost, networkPort, printerSettings.connectionTimeout);
+        setPrinterDevice({ type: 'websocket', host: networkHost, port: networkPort });
+      } catch (wsError) {
+        try {
+          // If WebSocket fails, try HTTP connection
+          connectionResult = await connectHttpNetworkPrinter(networkHost, networkPort);
+          setPrinterDevice(connectionResult);
+        } catch (httpError) {
+          try {
+            // Finally, try raw TCP simulation
+            connectionResult = await simulateRawTcpConnection(networkHost, networkPort);
+            setPrinterDevice(connectionResult);
+          } catch (tcpError) {
+            throw new Error(`All connection methods failed. WebSocket: ${wsError.message}, HTTP: ${httpError.message}, TCP: ${tcpError.message}`);
+          }
+        }
+      }
+      
+      setSuccess(`Network printer connected successfully via ${connectionResult.type || 'WebSocket'}`);
+      return true;
+    } catch (error) {
+      setError(`Network connection failed: ${error.message}`);
+      return false;
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Connect to thermal printer
+  const connectThermalPrinter = async (type = "usb") => {
+    try {
+      setError("");
+      setIsProcessing(true);
+
+      if (type === "usb" && "serial" in navigator) {
+        // Web Serial API for USB connection
+        const port = await navigator.serial.requestPort();
+        await port.open({
+          baudRate: printerSettings.baudRate,
+          dataBits: printerSettings.dataBits,
+          stopBits: printerSettings.stopBits,
+          parity: printerSettings.parity,
+        });
+
+        setPrinterPort(port);
+        setPrinterConnected(true);
+        setSuccess("Thermal printer connected via USB!");
+      } else if (type === "bluetooth" && "bluetooth" in navigator) {
+        // Web Bluetooth API
+        const device = await navigator.bluetooth.requestDevice({
+          filters: [{ services: ["000018f0-0000-1000-8000-00805f9b34fb"] }],
+          optionalServices: ["00001800-0000-1000-8000-00805f9b34fb"],
+        });
+
+        const server = await device.gatt.connect();
+        setPrinterDevice(device);
+        setPrinterConnected(true);
+        setSuccess("Thermal printer connected via Bluetooth!");
+      } else if (type === "network") {
+        // Network printer connection
+        const connected = await testNetworkConnection();
+        console.lg(connected)
+        if (connected) {
+          setPrinterConnected(true);
+        }
+      } else {
+        throw new Error("Selected connection method not supported by browser");
+      }
+    } catch (err) {
+      setError(`Failed to connect printer: ${err.message}`);
+      setPrinterConnected(false);
+      setNetworkStatus("error");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Disconnect thermal printer
+  const disconnectThermalPrinter = async () => {
+    try {
+      if (printerPort) {
+        await printerPort.close();
+        setPrinterPort(null);
+      }
+      if (printerDevice && printerDevice.gatt && printerDevice.gatt.connected) {
+        printerDevice.gatt.disconnect();
+        setPrinterDevice(null);
+      }
+      if (networkSocket) {
+        networkSocket.close();
+        setNetworkSocket(null);
+      }
+      setPrinterConnected(false);
+      setPrinterDevice(null);
+      setNetworkStatus("disconnected");
+      setSuccess("Printer disconnected");
+    } catch (err) {
+      setError(`Error disconnecting printer: ${err.message}`);
+    }
+  };
+
+  // Send data to thermal printer
+  const sendToPrinter = async (data) => {
+    if (!printerConnected) {
+      throw new Error("Printer not connected");
+    }
+
+    try {
+      if (printerPort) {
+        // USB Serial connection
+        const writer = printerPort.writable.getWriter();
+        const encoder = new TextEncoder();
+        await writer.write(encoder.encode(data));
+        writer.releaseLock();
+      } else if (printerDevice && printerDevice.gatt) {
+        // Bluetooth connection - implement based on your printer's GATT services
+        const encoder = new TextEncoder();
+        const dataArray = encoder.encode(data);
+        // You'll need to write to the appropriate GATT characteristic
+      } else if (printerType === "network") {
+        // Network connection
+        await sendToNetworkPrinter(data);
+      }
+    } catch (err) {
+      throw new Error(`Failed to send data to printer: ${err.message}`);
+    }
+  };
+
+  // Auto-reconnect for network printers
+  const attemptReconnection = async () => {
+    if (printerType !== "network" || printerSettings.reconnectAttempts <= 0) {
+      return false;
+    }
+
+    let attempts = 0;
+    while (attempts < printerSettings.reconnectAttempts) {
+      try {
+        setNetworkStatus("connecting");
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between attempts
+        
+        const connected = await testNetworkConnection();
+        if (connected) {
+          setPrinterConnected(true);
+          setSuccess("Network printer reconnected successfully!");
+          return true;
+        }
+      } catch (error) {
+        attempts++;
+        if (attempts >= printerSettings.reconnectAttempts) {
+          setError(`Reconnection failed after ${attempts} attempts`);
+          setNetworkStatus("error");
+        }
+      }
+    }
+    return false;
+  };
+
+  // Monitor network connection
+  useEffect(() => {
+    if (printerType === "network" && printerConnected && networkSocket) {
+      const handleClose = () => {
+        setPrinterConnected(false);
+        setNetworkStatus("disconnected");
+        
+        if (printerSettings.keepAlive) {
+          attemptReconnection();
+        }
+      };
+
+      const handleError = () => {
+        setNetworkStatus("error");
+        setPrinterConnected(false);
+      };
+
+      networkSocket.addEventListener('close', handleClose);
+      networkSocket.addEventListener('error', handleError);
+
+      return () => {
+        networkSocket.removeEventListener('close', handleClose);
+        networkSocket.removeEventListener('error', handleError);
+      };
+    }
+  }, [networkSocket, printerType, printerConnected, printerSettings.keepAlive]);
+
+  // Print QR code to thermal printer
+  const printQRToThermal = async (qrData, primaryLot) => {
+    if (!printerConnected) {
+      setError("Please connect thermal printer first");
+      return false;
+    }
+
+    try {
+      setIsPrinting(true);
+
+      // Create thermal printer command sequence
+      let printData = commands.INIT; // Initialize printer
+      printData += commands.CENTER_ALIGN; // Center alignment
+      printData += commands.BOLD_ON;
+      printData += `QR CODE\n`;
+      printData += commands.BOLD_OFF;
+      printData += commands.FEED_LINE;
+
+      // Add QR code
+      const qrSize =
+        printerSettings.qrSize === "small"
+          ? 4
+          : printerSettings.qrSize === "large"
+          ? 8
+          : 6;
+      printData += commands.QR_CODE(primaryLot, qrSize);
+      printData += commands.FEED_LINE;
+      printData += commands.FEED_LINE;
+
+      // Add text
+      printData += commands.CENTER_ALIGN;
+      printData += commands.BOLD_ON;
+      printData += `${primaryLot}\n`;
+      printData += commands.BOLD_OFF;
+      printData += commands.FEED_LINE;
+      printData += commands.FEED_LINE;
+      printData += commands.FEED_LINE;
+      printData += commands.CUT_PAPER; // Cut paper
+
+      // Send to printer
+      await sendToPrinter(printData);
+
+      // Save printed QR ID to backend
+      await savePrintedQRToBackend(primaryLot, qrData);
+
+      // Add to printed list
+      setPrintedQRIds((prev) => [
+        ...prev,
+        {
+          id: primaryLot,
+          timestamp: new Date().toISOString(),
+          status: "printed_and_saved",
+        },
+      ]);
+
+      setSuccess(`QR code for ${primaryLot} printed and saved successfully!`);
+      return true;
+    } catch (err) {
+      setError(`Printing failed: ${err.message}`);
+      
+      // If network printer fails, attempt reconnection
+      if (printerType === "network" && err.message.includes("connection")) {
+        attemptReconnection();
+      }
+      
+      return false;
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
+  // Save printed QR ID to backend
+  const savePrintedQRToBackend = async (primaryLot, qrData) => {
+    try {
+      // Placeholder for backend API call
+      // await fetch('/api/save-printed-qr', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ primaryLot, qrData, timestamp: new Date().toISOString() })
+      // });
+    } catch (err) {
+      console.error('Failed to save to backend:', err);
+    }
+  };
+
+  // Print all QR codes in queue
+  const printAllQRCodes = async () => {
+    if (qrCodes.length === 0) {
+      setError("No QR codes to print");
+      return;
+    }
+
+    setIsPrinting(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const qr of qrCodes) {
+      try {
+        const success = await printQRToThermal(qr, qr.primaryLot);
+        if (success) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+        // Small delay between prints
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      } catch (err) {
+        failCount++;
+        console.error(`Failed to print ${qr.primaryLot}:`, err);
+      }
+    }
+
+    setIsPrinting(false);
+    setSuccess(
+      `Printing completed: ${successCount} successful, ${failCount} failed`
+    );
+  };
+
+  const generateQRCode = (text, size = 200) => {
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(
+      text
+    )}`;
+    return qrUrl;
+  };
+
+  const csvUploadFn = (file) => {
+    if (!file) return;
+
+    const fileType = file.name.split(".").pop().toLowerCase();
+    if (fileType !== "csv") {
+      setError("Please upload a CSV file.");
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+    setIsProcessing(true);
+    setFileName(file.name);
+
+    Papa.parse(file, {
+      complete: (result) => {
+        if (result.errors.length > 0) {
+          setError("Error parsing CSV file. Please check the file format.");
+          setIsProcessing(false);
+          return;
+        }
+        setCsvData(result.data);
+        setIsProcessing(false);
+        setSuccess(
+          `Successfully loaded ${result.data.length} rows from CSV file.`
+        );
+      },
+      header: true,
+      skipEmptyLines: true,
+      dynamicTyping: true,
+      error: (error) => {
+        setError(
+          "Failed to parse CSV file. Please ensure it's properly formatted."
+        );
+        setIsProcessing(false);
+      },
+    });
+  };
+
+  const handleFileInput = (event) => {
+    const file = event.target.files[0];
+    csvUploadFn(file);
+  };
+
+  const handleDrop = (event) => {
+    event.preventDefault();
+    setDragOver(false);
+    const file = event.dataTransfer.files[0];
+    csvUploadFn(file);
+  };
+
+  const handleDragOver = (event) => {
+    event.preventDefault();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = (event) => {
+    event.preventDefault();
+    setDragOver(false);
+  };
+
+  const conversionFn = () => {
+    if (csvData.length === 0) {
+      setError("No CSV data to convert");
+      return;
+    }
+
+    const res = JSON.stringify(csvData, null, 2);
+    setJsonData(res);
+    setIsConverted(true);
+    setError("");
+    setSuccess("CSV successfully converted to JSON format!");
+
+    // Generate QR codes
+    generateQRCodes();
+  };
+
+  const generateQRCodes = () => {
+    const qrList = [];
+
+    csvData.forEach((row, index) => {
+      const primaryLot =
+        row["Primary LOT"] ||
+        row["Primary IOT"] ||
+        row["primary_lot"] ||
+        row["primary_iot"];
+
+      if (primaryLot) {
+        const qrUrl = generateQRCode(primaryLot, 300);
+        qrList.push({
+          id: index,
+          primaryLot: primaryLot,
+          loyaltyId: row["Loyalty ID"] || row["loyalty_id"] || "",
+          qrUrl: qrUrl,
+        });
+      }
+    });
+
+    setQrCodes(qrList);
+
+    if (autoPrint && printerConnected) {
+      setPrintQueue(qrList);
+    }
+  };
+
+  const downloadJson = () => {
+    if (!jsonData) return;
+
+    const blob = new Blob([jsonData], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName.replace(".csv", ".json") || "converted-data.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const resetConverter = () => {
+    setCsvData([]);
+    setJsonData("");
+    setFileName("");
+    setIsConverted(false);
+    setError("");
+    setSuccess("");
+    setIsProcessing(false);
+    setQrCodes([]);
+    setPrintedQRIds([]);
+    setPrintQueue([]);
+  };
+
+  const openQrModal = (qr) => {
+    setSelectedQr(qr);
+    setShowQrModal(true);
+  };
+
+  const getNetworkStatusIcon = () => {
+    switch (networkStatus) {
+      case "connecting":
+        return <NetworkCheck sx={{ color: "orange" }} />;
+      case "connected":
+        return <Wifi sx={{ color: "green" }} />;
+      case "error":
+        return <WifiOff sx={{ color: "red" }} />;
+      default:
+        return <WifiOff sx={{ color: "gray" }} />;
+    }
+  };
+
+  return (
+    <Box
+      sx={{
+        width: "100vw",
+        minHeight: "100vh",
+        background: `linear-gradient(135deg, #337ab7 0%, #2c6ba0 100%)`,
+        py: 2,
+      }}
+    >
+      <Container sx={{ height: "100%", width: "100%" }}>
+        <Box textAlign="center" mb={4}>
+          <Typography
+            variant="h3"
+            component="h1"
+            gutterBottom
+            sx={{
+              color: "white",
+              fontWeight: "bold",
+              textShadow: "0 2px 4px rgba(0,0,0,0.3)",
+            }}
+          >
+            CSV to JSON & Thermal QR Printer
+          </Typography>
+          <Typography variant="h6" sx={{ color: "rgba(255,255,255,0.9)" }}>
+            Convert CSV to JSON and print QR codes directly to thermal printer
+          </Typography>
+        </Box>
+
+        {/* Thermal Printer Connection Card */}
+        <Card elevation={8} sx={{ mb: 4, borderRadius: 3 }}>
+          <CardContent sx={{ p: 3 }}>
+            <Typography
+              variant="h6"
+              gutterBottom
+              color="primary"
+              sx={{ display: "flex", alignItems: "center", mb: 2 }}
+            >
+              <Print sx={{ mr: 1 }} />
+              Thermal Printer Connection
+              <Chip
+                label={printerConnected ? "Connected" : "Disconnected"}
+                color={printerConnected ? "success" : "error"}
+                size="small"
+                sx={{ ml: 2 }}
+              />
+              {printerType === "network" && (
+                <Chip
+                  icon={getNetworkStatusIcon()}
+                  label={networkStatus}
+                  size="small"
+                  sx={{ ml: 1 }}
+                />
+              )}
+            </Typography>
+
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} sm={6} md={3}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Connection Type</InputLabel>
+                  <Select
+                    value={printerType}
+                    onChange={(e) => setPrinterType(e.target.value)}
+                    disabled={printerConnected}
+                  >
+                    <MenuItem value="usb">
+                      <Usb sx={{ mr: 1 }} />
+                      USB Serial
+                    </MenuItem>
+                    <MenuItem value="bluetooth">
+                      <Bluetooth sx={{ mr: 1 }} />
+                      Bluetooth
+                    </MenuItem>
+                    <MenuItem value="network">
+                      <Wifi sx={{ mr: 1 }} />
+                      Network
+                    </MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={2}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={autoPrint}
+                      onChange={(e) => setAutoPrint(e.target.checked)}
+                    />
+                  }
+                  label="Auto Print"
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={4}>
+                <Box display="flex" gap={1}>
+                  {!printerConnected ? (
+                    <Button
+                      variant="contained"
+                      onClick={() => connectThermalPrinter(printerType)}
+                      disabled={isProcessing}
+                      size="small"
+                    >
+                      {isProcessing ? "Connecting..." : "Connect Printer"}
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outlined"
+                      onClick={disconnectThermalPrinter}
+                      startIcon={<Close />}
+                      size="small"
+                    >
+                      Disconnect
+                    </Button>
+                  )}
+
+                  {printerType === "network" && (
+                    <Button
+                      variant="outlined"
+                      onClick={testNetworkConnection}
+                      disabled={isProcessing}
+                      size="small"
+                    >
+                      Test Connection
+                    </Button>
+                  )}
+
+                  <IconButton
+                    onClick={() => setShowPrinterSettings(true)}
+                    size="small"
+                  >
+                    <Settings />
+                  </IconButton>
+                </Box>
+              </Grid>
+            </Grid>
+
+            {/* Network Connection Status */}
+            {printerType === "network" && (
+              <Box mt={2}>
+                <Typography variant="body2" color="text.secondary">
+                  Network Address: {printerSettings.networkHost}:{printerSettings.networkPort}
+                </Typography>
+                {networkStatus === "connecting" && (
+                  <LinearProgress sx={{ mt: 1 }} />
+                )}
+              </Box>
+            )}
+
+            {printedQRIds.length > 0 && (
+              <Accordion sx={{ mt: 2 }}>
+                <AccordionSummary expandIcon={<ExpandMore />}>
+                  <Box display="flex" alignItems="center">
+                    <History sx={{ mr: 1 }} />
+                    <Typography>
+                      Printed QR History ({printedQRIds.length})
+                    </Typography>
+                  </Box>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <List dense>
+                    {printedQRIds.slice(-10).map((item, index) => (
+                      <ListItem key={index}>
+                        <ListItemIcon>
+                          <CheckCircle color="success" fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={item.id}
+                          secondary={new Date(item.timestamp).toLocaleString()}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </AccordionDetails>
+              </Accordion>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Main Converter Card */}
+        <Card elevation={8} sx={{ mb: 4, borderRadius: 3 }}>
+          <CardContent sx={{ p: 4 }}>
+            {/* Upload Section */}
+            <Typography
+              variant="h5"
+              gutterBottom
+              color="primary"
+              sx={{ display: "flex", alignItems: "center", mb: 3 }}
+            >
+              <CloudUpload sx={{ mr: 1 }} />
+              Upload CSV File
+            </Typography>
+
+            <Paper
+              variant="outlined"
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              sx={{
+                p: 4,
+                textAlign: "center",
+                border: dragOver ? "2px dashed #1976d2" : "2px dashed #ccc",
+                bgcolor: dragOver ? "action.hover" : "background.paper",
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+                "&:hover": {
+                  borderColor: "primary.main",
+                  bgcolor: "action.hover",
+                },
+                mb: 3,
+              }}
+            >
+              <Description
+                sx={{ fontSize: 48, color: "text.secondary", mb: 2 }}
+              />
+              <Typography variant="h6" gutterBottom>
+                Drag and drop your CSV file here
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                or click the button below to browse files
+              </Typography>
+
+              <input
+                type="file"
+                onChange={handleFileInput}
+                accept=".csv"
+                style={{ display: "none" }}
+                id="csv-upload"
+              />
+              <label htmlFor="csv-upload">
+                <Button
+                  variant="contained"
+                  component="span"
+                  startIcon={<CloudUpload />}
+                  sx={{ mt: 1 }}
+                >
+                  Browse Files
+                </Button>
+              </label>
+
+              {fileName && (
+                <Typography variant="body2" sx={{ mt: 2, color: "success.main" }}>
+                  Selected: {fileName}
+                </Typography>
+              )}
+            </Paper>
+
+            {/* Progress Bar */}
+            {isProcessing && (
+              <Box sx={{ mb: 3 }}>
+                <LinearProgress />
+                <Typography variant="body2" textAlign="center" sx={{ mt: 1 }}>
+                  Processing file...
+                </Typography>
+              </Box>
+            )}
+
+            {/* Error/Success Messages */}
+            {error && (
+              <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError("")}>
+                <Typography variant="body2">{error}</Typography>
+              </Alert>
+            )}
+
+            {success && (
+              <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess("")}>
+                <Typography variant="body2">{success}</Typography>
+              </Alert>
+            )}
+
+            {/* CSV Data Preview */}
+            {csvData.length > 0 && !isConverted && (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom color="primary">
+                  CSV Data Preview ({csvData.length} rows)
+                </Typography>
+                <Paper
+                  sx={{
+                    p: 2,
+                    maxHeight: 200,
+                    overflow: "auto",
+                    bgcolor: "grey.50",
+                  }}
+                >
+                  <pre style={{ fontSize: "12px", margin: 0 }}>
+                    {JSON.stringify(csvData.slice(0, 3), null, 2)}
+                    {csvData.length > 3 && "\n... and more"}
+                  </pre>
+                </Paper>
+              </Box>
+            )}
+
+            {/* Action Buttons */}
+            <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap" }}>
+              <Button
+                variant="contained"
+                onClick={conversionFn}
+                disabled={csvData.length === 0 || isProcessing}
+                startIcon={<Transform />}
+                size="large"
+              >
+                Convert to JSON & Generate QR
+              </Button>
+
+              {isConverted && (
+                <>
+                  <Button
+                    variant="outlined"
+                    onClick={downloadJson}
+                    startIcon={<Download />}
+                    size="large"
+                  >
+                    Download JSON
+                  </Button>
+
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    onClick={printAllQRCodes}
+                    disabled={!printerConnected || isPrinting || qrCodes.length === 0}
+                    startIcon={<Print />}
+                    size="large"
+                  >
+                    {isPrinting ? "Printing..." : `Print All QR (${qrCodes.length})`}
+                  </Button>
+                </>
+              )}
+
+              <Button
+                variant="outlined"
+                onClick={resetConverter}
+                startIcon={<Refresh />}
+                size="large"
+              >
+                Reset
+              </Button>
+            </Box>
+
+            {/* JSON Output */}
+            {isConverted && jsonData && (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom color="primary">
+                  JSON Output
+                </Typography>
+                <Paper
+                  sx={{
+                    p: 2,
+                    maxHeight: 300,
+                    overflow: "auto",
+                    bgcolor: "grey.50",
+                  }}
+                >
+                  <pre style={{ fontSize: "12px", margin: 0 }}>{jsonData}</pre>
+                </Paper>
+              </Box>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* QR Codes Display */}
+        {qrCodes.length > 0 && (
+          <Card elevation={8} sx={{ mb: 4, borderRadius: 3 }}>
+            <CardContent sx={{ p: 4 }}>
+              <Typography
+                variant="h5"
+                gutterBottom
+                color="primary"
+                sx={{ display: "flex", alignItems: "center", mb: 3 }}
+              >
+                <QrCode sx={{ mr: 1 }} />
+                Generated QR Codes ({qrCodes.length})
+              </Typography>
+
+              <Grid container spacing={3}>
+                {qrCodes.map((qr) => (
+                  <Grid item xs={12} sm={6} md={4} lg={3} key={qr.id}>
+                    <Card
+                      elevation={2}
+                      sx={{
+                        transition: "transform 0.2s, box-shadow 0.2s",
+                        "&:hover": {
+                          transform: "translateY(-2px)",
+                          boxShadow: 4,
+                        },
+                        cursor: "pointer",
+                      }}
+                      onClick={() => openQrModal(qr)}
+                    >
+                      <CardContent sx={{ textAlign: "center", p: 2 }}>
+                        <img
+                          src={qr.qrUrl}
+                          alt={`QR Code for ${qr.primaryLot}`}
+                          style={{ width: "100%", maxWidth: 150, height: "auto" }}
+                        />
+                        <Typography variant="subtitle2" sx={{ mt: 1, fontWeight: "bold" }}>
+                          {qr.primaryLot}
+                        </Typography>
+                        {qr.loyaltyId && (
+                          <Typography variant="caption" color="text.secondary">
+                            Loyalty: {qr.loyaltyId}
+                          </Typography>
+                        )}
+                        <Box sx={{ mt: 1 }}>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              printQRToThermal(qr, qr.primaryLot);
+                            }}
+                            disabled={!printerConnected || isPrinting}
+                            startIcon={<Print />}
+                          >
+                            Print
+                          </Button>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            </CardContent>
+          </Card>
+        )}
+      </Container>
+
+      {/* QR Code Modal */}
+      <Dialog
+        open={showQrModal}
+        onClose={() => setShowQrModal(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box display="flex" alignItems="center" justifyContent="space-between">
+            <Typography variant="h6">QR Code Details</Typography>
+            <IconButton onClick={() => setShowQrModal(false)}>
+              <Close />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {selectedQr && (
+            <Box textAlign="center">
+              <img
+                src={selectedQr.qrUrl}
+                alt={`QR Code for ${selectedQr.primaryLot}`}
+                style={{ width: "100%", maxWidth: 300, height: "auto" }}
+              />
+              <Typography variant="h6" sx={{ mt: 2 }}>
+                {selectedQr.primaryLot}
+              </Typography>
+              {selectedQr.loyaltyId && (
+                <Typography variant="body2" color="text.secondary">
+                  Loyalty ID: {selectedQr.loyaltyId}
+                </Typography>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              if (selectedQr) {
+                printQRToThermal(selectedQr, selectedQr.primaryLot);
+              }
+            }}
+            disabled={!printerConnected || isPrinting}
+            variant="contained"
+            startIcon={<Print />}
+          >
+            {isPrinting ? "Printing..." : "Print QR Code"}
+          </Button>
+          <Button onClick={() => setShowQrModal(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Printer Settings Modal */}
+      <Dialog
+        open={showPrinterSettings}
+        onClose={() => setShowPrinterSettings(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box display="flex" alignItems="center" justifyContent="space-between">
+            <Typography variant="h6">Printer Settings</Typography>
+            <IconButton onClick={() => setShowPrinterSettings(false)}>
+              <Close />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Grid container spacing={3} sx={{ mt: 1 }}>
+            {/* Serial Settings */}
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" gutterBottom>
+                Serial Connection Settings
+              </Typography>
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                label="Baud Rate"
+                type="number"
+                value={printerSettings.baudRate}
+                onChange={(e) =>
+                  setPrinterSettings({
+                    ...printerSettings,
+                    baudRate: parseInt(e.target.value),
+                  })
+                }
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <FormControl fullWidth>
+                <InputLabel>Parity</InputLabel>
+                <Select
+                  value={printerSettings.parity}
+                  onChange={(e) =>
+                    setPrinterSettings({
+                      ...printerSettings,
+                      parity: e.target.value,
+                    })
+                  }
+                >
+                  <MenuItem value="none">None</MenuItem>
+                  <MenuItem value="even">Even</MenuItem>
+                  <MenuItem value="odd">Odd</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* Network Settings */}
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+              <Typography variant="subtitle1" gutterBottom>
+                Network Connection Settings
+              </Typography>
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                label="Network Host/IP"
+                value={printerSettings.networkHost}
+                onChange={(e) =>
+                  setPrinterSettings({
+                    ...printerSettings,
+                    networkHost: e.target.value,
+                  })
+                }
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                label="Network Port"
+                type="number"
+                value={printerSettings.networkPort}
+                onChange={(e) =>
+                  setPrinterSettings({
+                    ...printerSettings,
+                    networkPort: parseInt(e.target.value),
+                  })
+                }
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                label="Connection Timeout (ms)"
+                type="number"
+                value={printerSettings.connectionTimeout}
+                onChange={(e) =>
+                  setPrinterSettings({
+                    ...printerSettings,
+                    connectionTimeout: parseInt(e.target.value),
+                  })
+                }
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                label="Reconnect Attempts"
+                type="number"
+                value={printerSettings.reconnectAttempts}
+                onChange={(e) =>
+                  setPrinterSettings({
+                    ...printerSettings,
+                    reconnectAttempts: parseInt(e.target.value),
+                  })
+                }
+              />
+            </Grid>
+
+            {/* Print Settings */}
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+              <Typography variant="subtitle1" gutterBottom>
+                Print Settings
+              </Typography>
+            </Grid>
+            <Grid item xs={6}>
+              <FormControl fullWidth>
+                <InputLabel>Paper Width</InputLabel>
+                <Select
+                  value={printerSettings.paperWidth}
+                  onChange={(e) =>
+                    setPrinterSettings({
+                      ...printerSettings,
+                      paperWidth: e.target.value,
+                    })
+                  }
+                >
+                  <MenuItem value={58}>58mm</MenuItem>
+                  <MenuItem value={80}>80mm</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={6}>
+              <FormControl fullWidth>
+                <InputLabel>QR Code Size</InputLabel>
+                <Select
+                  value={printerSettings.qrSize}
+                  onChange={(e) =>
+                    setPrinterSettings({
+                      ...printerSettings,
+                      qrSize: e.target.value,
+                    })
+                  }
+                >
+                  <MenuItem value="small">Small</MenuItem>
+                  <MenuItem value="medium">Medium</MenuItem>
+                  <MenuItem value="large">Large</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={printerSettings.keepAlive}
+                    onChange={(e) =>
+                      setPrinterSettings({
+                        ...printerSettings,
+                        keepAlive: e.target.checked,
+                      })
+                    }
+                  />
+                }
+                label="Keep Connection Alive (Auto-reconnect)"
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowPrinterSettings(false)}>Cancel</Button>
+          <Button
+            onClick={() => setShowPrinterSettings(false)}
+            variant="contained"
+            startIcon={<Save />}
+          >
+            Save Settings
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+}
+
+export default ThermalPrinterCSVConverter;
